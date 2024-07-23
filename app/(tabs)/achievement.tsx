@@ -7,8 +7,11 @@ import { SmallP, P, H1, LargeP } from "@/components/Text";
 import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 import { captureScreen } from "react-native-view-shot";
 import * as Sharing from 'expo-sharing';
+import { getAuth } from "firebase/auth";
 
 export default function achivement() {
+  const { currentUser } = getAuth();
+
   const CaptureTheScreen = () => {
     const options = {
       mimeType: 'image/jpeg',
@@ -81,7 +84,7 @@ export default function achivement() {
             }}
           >
             <P style={{ color: "#0B7156", fontWeight: "700" }}>
-              Arsyad Ali Mahardika
+              {currentUser?.displayName}
             </P>
           </View>
           <Image

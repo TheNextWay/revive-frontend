@@ -208,8 +208,8 @@ export default function qr() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [result, setResult] = useState(true);
-  const [error, setError] = useState(false);
+  const [result, setResult] = useState(false);
+  const [error, setError] = useState(true);
   const [flashToggle, setFlashToggle] = useState(false);
   const toggleSwitch = () => setFlashToggle(previousState => !previousState);
 

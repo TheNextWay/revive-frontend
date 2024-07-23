@@ -75,10 +75,7 @@ export default function RootLayout() {
     PlusJakartaSans_800ExtraBold_Italic,
   });
 
-
-  if (!fontsLoaded) {
     return  <RootLayoutNav />;
-}
 }
 
 function RootLayoutNav() { 
@@ -86,7 +83,6 @@ function RootLayoutNav() {
   return (
     // <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
        <Stack screenOptions={{
-              // Hide the header for all other routes.
               headerShown: false,
             }} >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
