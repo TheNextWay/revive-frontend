@@ -1,194 +1,238 @@
-import React, { useEffect, useState } from "react";
-import {
-  View,
-  StyleSheet,
-  Button,
-  Image,
-  Text,
-  TouchableWithoutFeedback,
-  TextInput,
-  TouchableOpacity,
-  Keyboard,
-  Linking,
-} from "react-native";
-import { getAuth, signOut, updateProfile } from "firebase/auth";
+import React, { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View, Image,  FlatList, Text, TouchableOpacity, Linking, ScrollView } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { locations } from "@app/components/data";
+import Colors from '@/constants/Colors';
+import { MediumP, P, SmallP } from '@/components/Text';
+import haversine from 'haversine';
+import * as Location from 'expo-location';
+import { router } from 'expo-router';
 
-import { Header } from "@components/Header";
-import { LinearGradient } from "expo-linear-gradient";
-import { MaterialIcons } from "@expo/vector-icons";
-import Colors from "@constants/Colors";
-import { H1, H2, LargeP, MediumP, P, SmallP } from "@components/Text";
-import { Link, Redirect, router } from 'expo-router';
-import { FormErrorMessage } from "@/components/FormErrorMessage";
-const locations = [
-    {
-      title:'SMK Telkom Malang',
-      address:'Jl. Danau Ranau, Sawojajar, Kec. Kedungkandang, Kota Malang, Jawa Timur 65139 ',
-      maps_url:'https://maps.app.goo.gl/wQcYvA4eMCLdKdMt5',
-      coordinates:['-7.9769845857885135', '112.65874175490647']
-    },
-    {
-        title:'Apartemen Begawan',
-        address:'Jl. Raya Tlogomas No.1-3, Tlogomas, Kec. Lowokwaru, Kota Malang, Jawa Timur 65144 ',
-        maps_url:'https://maps.app.goo.gl/FKVopMX61wb8ikhW9',
-        coordinates:['-7.926794782839947', '112.60248455836108']
-      }, 
+export default function App() {
+  const mapRef = useRef<MapView | null>(null); // Reference ke MapView
+  const initialRegion = {
+    latitude: -7.966620,
+    longitude: 112.632632,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  };
 
-  ]
-export default function LocationsList() {
-  const { currentUser } = getAuth();
-  const auth = getAuth();
-  const user = auth.currentUser;
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-  const email = user?.email;
-  const displayName = user?.displayName;
-  const [name, setName] = useState(displayName);
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number; } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      "keyboardDidShow",
-      () => {
-        setKeyboardVisible(true); // or some other  action
-      }
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      "keyboardDidHide",
-      () => {
-        setKeyboardVisible(false); // or some other action
-      }
-    );
+    (async () => {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setErrorMsg('Permission to access location was denied');
+          return;
+        }
 
-    return () => {
-      keyboardDidHideListener.remove();
-      keyboardDidShowListener.remove();
+        // Mendapatkan lokasi
+        let location = await Location.getCurrentPositionAsync({});
+        setLocation(location);
+
+        // Menghitung jarak
+        const userLocation = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude
+        };
+        setUserLocation(userLocation);
+      } catch (error) {
+        console.error('Error fetching location or calculating distance:', error);
+        setErrorMsg('Something went wrong while fetching location');
+      }
+    })();
+  }, [])
+
+  // Fungsi untuk pindah ke lokasi yang dipilih
+  const goToLocation = (location: { id?: number; title?: string; description?: string; coordinates: any; }) => {
+    const region = {
+      latitude: location.coordinates.latitude,
+      longitude: location.coordinates.longitude,
+      latitudeDelta: 0.01, // Zoom level yang lebih detail
+      longitudeDelta: 0.01,
     };
-  }, []);
-  const updateDisplayname = () => {
-
-    if (user) {
-      updateProfile(user, {
-        displayName: name,
-      })
-        .then(() => {
-          console.log("User profile updated successfully");
-          console.log("berhasl coy")
-        })
-        .catch((error) => {
-          console.error("Error updating profile: ", error);
-        });
-    } else {
-      console.log("No user is signed in."); 
+    
+    if (mapRef.current) {
+      (mapRef.current as MapView).animateToRegion(region, 1000); // Animasi ke lokasi dalam 1 detik
     }
   };
-  return (
-    <>
-      <LinearGradient
-        style={{ height: 424 }}
-        colors={[
-          "rgba(27, 174, 128, 0.4)",
-          "rgba(11, 113, 86, 0.32)",
-          "rgba(255, 255, 255, 0.17)",
-        ]}
-      >
-        <Header />
-        <View
-          style={{
-            marginHorizontal: 15,
-          }}
-        >   
-        <View>
-            {
-                locations.map((location,index) => (
-
-                <View
-                key={index}
-                    style={{
-                    backgroundColor: Colors.white,
-                    borderRadius: 8,
-                    shadowOffset: { width: 0, height: -3 },
-                    paddingHorizontal: 18,
-                    paddingVertical: 18,
-                    marginTop:15
-                    }}
-                >
-                    <View
-                    style={{
-                        justifyContent: "space-between",
-                        flexDirection: "row",
-                    }}
-                    >
-                    <View
-                        style={{
-                        borderRadius: 3,
-                        borderWidth: 1,
-                        borderColor: Colors.primary,
-                        padding: 3,
-                        }}
-                    >
-                        <SmallP
-                        style={{
-                            fontSize: 10,
-                            fontWeight: "600",
-                            color: Colors.primary,
-                        }}
-                        >
-                        3.2 KM
-                        </SmallP>
-                    </View>
-                    <TouchableOpacity onPress={() => Linking.openURL(location.maps_url)} style={{ flexDirection: "row", alignItems:'center' }}>
-                        <SmallP
-                        style={{
-                            color: Colors.primary,
-                            textDecorationLine: "underline",
-                            fontWeight: "500",
-                        }}
-                        >
-                        Buka di Google maps
-                        </SmallP>
-                        <Image style={{width:20}} source={require("@assets/icons/distance.png")}/>
-                    </TouchableOpacity>
-                    </View>
-                    <View style={{marginTop:5}}>
-                        <MediumP style={{fontWeight: "600",
-                        }}>{location.title}</MediumP>
-                        <P style={{fontWeight: "600",
-                        color:Colors.gray
-                        }}>{location.address}</P>
-                    </View>
-                </View>
-                    
-                ))
-            }
-            </View>
-            <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: 390,
-            }}
-          >
-            <TouchableOpacity
-              style={{
-                alignItems: "center",
-                justifyContent: "center",
-                paddingHorizontal: 25,
-                backgroundColor: "#1BAE8033",
-                paddingVertical: 25,
-                borderRadius: 30,
-                width: 60,
-                height: 60,
-              }}
-              disabled={name ? false : true}
-              onPress={() => router.replace("/(tabs)")}
-            >
-              <Image source={require("@assets/icons/arrow_left_green.png")} />
-            </TouchableOpacity>
-
-          </View>
-        </View>
         
-      </LinearGradient>
-    </>
-  );
-};
+              return (
+                <View style={styles.container}>
+                  <MapView
+                    ref={mapRef} // Refrensi ke MapView
+                    style={styles.map}
+                    initialRegion={initialRegion}
+                  >
+                    {locations.map((location) => (
+                      <Marker
+                        key={location.id}
+                        coordinate={location.coordinates}
+                        title={location.title}
+                        description={location.details}
+                      />
+                    ))}
+                  </MapView>
+              
+                  <TouchableOpacity
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "flex-start",
+                  paddingHorizontal: 25,
+                  backgroundColor: Colors.primary,
+                  paddingVertical: 8,
+                  borderRadius: 30,
+                  width: 150,
+                  top: 40, // Sesuaikan dengan jarak dari atas
+                  left: 15, // Jarak dari kiri layar
+                }}
+                onPress={() => router.back()}
+              >
+                <Image source={require("@assets/icons/arrow_left.png")} />
 
+                <P
+                  style={{
+                    fontWeight: "600",
+                    color: Colors.white,
+                    paddingRight: 5,
+                  }}
+                >
+                  Kembali
+                </P>
+              </TouchableOpacity> 
+                  {/* ScrollView ditempatkan di atas MapView dengan absolute positioning */}
+                  <View style={styles.overlayContainer}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      {locations.map((location, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          onPress={() => goToLocation(location)} // Pindah ke lokasi ketika item dipencet
+                          style={{ marginLeft: 15 }}
+                        >
+                          <View
+                            style={{
+                              backgroundColor: 'rgba(255, 255, 255, 0.9)', // Transparansi background
+                              borderRadius: 8,
+                              shadowOffset: { width: 0, height: -3 },
+                              paddingHorizontal: 18,
+                              paddingVertical: 18,
+                              marginTop: 15,
+                              height: 150,
+
+                            }}
+                          >
+                            <View
+                              style={{
+                                justifyContent: "space-between",
+                                flexDirection: "row",
+                              }}
+                            >
+                              <View
+                                style={{
+                                  borderRadius: 3,
+                                  borderWidth: 1,
+                                  borderColor: Colors.primary,
+                                  padding: 3,
+                                }}
+                              >
+                                <SmallP
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: "600",
+                                    color: Colors.primary,
+                                  }}
+                                >
+                                  {userLocation &&
+                                    haversine(
+                                      userLocation,
+                                      {
+                                        latitude: location.coordinates.latitude,
+                                        longitude: location.coordinates.longitude,
+                                      },
+                                      { unit: "km" }
+                                    ).toFixed(1)}{" "}
+                                  KM
+                                </SmallP>
+                              </View>
+                              <TouchableOpacity
+                                onPress={() => Linking.openURL(location.maps_url)}
+                                style={{ flexDirection: "row", alignItems: "center" }}
+                              >
+                                <SmallP
+                                  style={{
+                                    color: Colors.primary,
+                                    textDecorationLine: "underline",
+                                    fontWeight: "500",
+                                  }}
+                                >
+                                  Buka di Google maps
+                                </SmallP>
+                                <Image
+                                  style={{ width: 20 }}
+                                  source={require("@assets/icons/distance.png")}
+                                />
+                              </TouchableOpacity>
+                            </View>
+                            <View style={{ marginTop: 15 }}>
+                              <MediumP style={{ fontWeight: "600" }}>
+                                {location.title}
+                              </MediumP>
+                              <SmallP style={{ fontWeight: "600" }}>
+                                {location.details}
+                              </SmallP>
+                              <Text
+                                numberOfLines={2}
+                                style={{
+                                  fontFamily: "PlusJakartaSans_400Regular",
+                                  fontSize: 12,
+                                  fontWeight: "600",
+                                  color: Colors.gray,
+                                  width: 250,
+                                }}
+                              >
+                                {location.address}
+                              </Text>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                </View>
+              );
+              
+              
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  overlayContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 10,
+  },
+  listItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  listTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  listDescription: {
+    fontSize: 12,
+    color: '#666',
+  },
+});

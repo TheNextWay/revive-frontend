@@ -120,7 +120,7 @@ export default function LoginScreen() {
                 <Text
                   style={{ fontSize: 15, fontWeight: "600", color: "#666666" }}
                 >
-                  Alamat Email
+                  Alamat Email {errorState}
                 </Text>
                 <TextInput
                   style={{

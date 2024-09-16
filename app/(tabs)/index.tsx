@@ -1,73 +1,25 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Text, View, ScrollView, Image, StyleSheet, TouchableOpacity} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Octicons } from '@expo/vector-icons';
-import MapView from 'react-native-maps';
+import MapView, { Marker } from 'react-native-maps';
 import Colors from "@constants/Colors"
 import {Header, HeaderWhite} from '@components/Header';
 import { H1, SmallP, P} from '@components/Text';
 import { MaterialIcons } from "@expo/vector-icons";
 import { router } from 'expo-router';
-
+import * as Location from 'expo-location';
+import axios from 'axios';
+import { carousel, locations, marketplace } from "@app/components/data";
+import haversine from 'haversine'; 
 
 const formatter = new Intl.NumberFormat('id-ID', {
   style: 'currency',
   currency: 'IDR',
 });
 
-const carousel = [
-  require('@assets/carousel/carousel-1.png'),
-  require('@assets/carousel/carousel-2.png')
-]
-
-const thrifting = [
-  {
-    image:'https://images.tokopedia.net/img/cache/300-square/VqbcmM/2023/5/2/c85e4e4c-15f9-49b3-8689-42da7a5901b0.jpg',
-    title:'Nike Hoddie',
-    price:320000
-  },
-  {
-    image:'https://images.tokopedia.net/img/cache/300-square/VqbcmM/2023/5/2/c85e4e4c-15f9-49b3-8689-42da7a5901b0.jpg',
-    title:'Seragam SMA',
-    price:320000
-  },
-  {
-    image:'https://images.tokopedia.net/img/cache/300-square/VqbcmM/2023/5/2/c85e4e4c-15f9-49b3-8689-42da7a5901b0.jpg',
-    title:'Baju Anak Kecil Lucu',
-    price:320000
-  },
-  {
-    image:'https://images.tokopedia.net/img/cache/300-square/VqbcmM/2023/5/2/c85e4e4c-15f9-49b3-8689-42da7a5901b0.jpg',
-    title:'Outer perempuan',
-    price:320000
-  }
-]
-
-const upcyle = [
-  {
-    image:'https://images.tokopedia.net/img/cache/300-square/VqbcmM/2023/5/2/c85e4e4c-15f9-49b3-8689-42da7a5901b0.jpg',
-    title:'Tas Laptop 15" - PlasticPay',
-    price:320000
-  },
-  {
-    image:'https://images.tokopedia.net/img/cache/300-square/VqbcmM/2023/5/2/c85e4e4c-15f9-49b3-8689-42da7a5901b0.jpg',
-    title:'Bucket Hat - dbelel',
-    price:320000
-  },
-  {
-    image:'https://images.tokopedia.net/img/cache/300-square/VqbcmM/2023/5/2/c85e4e4c-15f9-49b3-8689-42da7a5901b0.jpg',
-    title:'Loly Backpack -dbelel',
-    price:320000
-  },
-  {
-    image:'https://images.tokopedia.net/img/cache/300-square/VqbcmM/2023/5/2/c85e4e4c-15f9-49b3-8689-42da7a5901b0.jpg',
-    title:'Wine Bag - PlasticPay',
-    price:320000
-  }
-]
 
 function Carousel() {
-  
   return (
     
     <View style={{ height:200, width:450}}>
@@ -89,7 +41,6 @@ function Carousel() {
       
     </ScrollView>
     </View>
-
   );
 }
 
@@ -116,7 +67,7 @@ function Point() {
           fontFamily:'PlusJakartaSans_700Bold',
           color:Colors.primary,
           paddingTop:2
-        }}>321.000
+        }}>15.000
         </H1>
       </View>
       <LinearGradient 
@@ -144,172 +95,231 @@ function Point() {
           fontFamily:'PlusJakartaSans_700Bold',
           color:"white",
         }}>
-          003
+          3
         </H1>
       </LinearGradient>
     </View>
   );
 }
 
-function Location() {
-  return (
-    <LinearGradient 
-      colors={["#1BAE80","#0B7156"]}
-      style={{
-        backgroundColor:"#FFCD29",
-        borderRadius:15,
-        marginTop:20,
-      }}>
+function LocationSection() {
 
-      <View style={{
-      backgroundColor:"#FFCD29",
-      borderTopEndRadius:15,
-      borderTopStartRadius:15,
-      padding:10,
-      paddingTop:13,
-      display:"flex",
-      flexDirection:"row",
-      justifyContent:"space-between",
-      alignItems:"center"
-    }}>
-      <View style={{
-        display:"flex",
-        flexDirection:"row",
-      }}>
-      <Octicons style={{paddingHorizontal:7}} name="location" size={30} color="#0B7156" />
-        <View>
-          <P style={{
-          fontFamily:"PlusJakartaSans_600SemiBold",
-          color:"#0B7156",
-          fontSize:10,
-        }}>Lokasimu Saat ini</P>
-          <P style={{
-          fontFamily:"PlusJakartaSans_600SemiBold",
-          color:"#0B7156",
-          fontSize:13
-        }}>Jalan Danau Ranau, Sawojajar</P>
-        </View>
-      </View>
-        <TouchableOpacity
-        onPress={() => router.push("/components/locationList")} 
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number; }>({ latitude: 0, longitude: 0 });
+  const [address, setAddress] = useState('Fetching address...');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  useEffect(() => {
+    (async () => {
+      try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          setErrorMsg('Permission to access location was denied');
+          return;
+        }
+
+        let location = await Location.getCurrentPositionAsync({});
+        setLocation(location);
+        const userLocation = {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        };
+        setUserLocation(userLocation);
+        // Menggunakan Nominatim untuk reverse geocoding
+        const { latitude, longitude } = location.coords;
+        // setUserLocation(location.coords.altitude);
+        const response = await axios.get(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+        );
+
+        if (response.data && response.data.display_name) {
+          setAddress(response.data.display_name);
+        } else {
+          setAddress('Address not found');
+        }
+      } catch (error) {
+        setErrorMsg('Something went wrong while fetching location');
+      }
+    })();
+  }, []); 
+  const initialRegion = {
+    latitude: -7.966620,
+    longitude: 112.632632,
+    latitudeDelta: 0.1,
+    longitudeDelta: 0.1,
+  };
+  
+
+  return (
+    <LinearGradient
+      colors={["#1BAE80", "#0B7156"]}
+      style={{
+        backgroundColor: "#FFCD29",
+        borderRadius: 15,
+        marginTop: 20,
+      }}
+    >
+      <View
         style={{
-          backgroundColor:"white",
-          paddingVertical:6,
-          paddingHorizontal:20,
-          borderRadius:35
-        }}> 
-          <P
+          backgroundColor: "#FFCD29",
+          borderTopEndRadius: 15,
+          borderTopStartRadius: 15,
+          padding: 10,
+          paddingTop: 13,
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <View
           style={{
-            fontWeight:"bold",
-            fontSize:12,
-            color:"#0B7156"
-          }}>More info</P>
+            display: "flex",
+            flexDirection: "row",
+          }}
+        >
+          <Octicons
+            style={{ paddingHorizontal: 7 }}
+            name="location"
+            size={30}
+            color="#0B7156"
+          />
+          <View>
+            <P
+              style={{
+                fontFamily: "PlusJakartaSans_600SemiBold",
+                color: "#0B7156",
+                fontSize: 10,
+              }}
+            >
+              Lokasimu Saat ini
+            </P>
+            <Text
+              numberOfLines={1}
+              style={{
+                fontFamily: "PlusJakartaSans_600SemiBold",
+                color: "#0B7156",
+                fontSize: 13,
+                width: 230,
+              }}
+            >
+              {address}{" "}
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          onPress={() => router.push("/components/locationList")}
+          style={{
+            backgroundColor: "white",
+            paddingVertical: 6,
+            paddingHorizontal: 20,
+            borderRadius: 35,
+          }}
+        >
+          <P
+            style={{
+              fontWeight: "bold",
+              fontSize: 12,
+              color: "#0B7156",
+            }}
+          >
+            More info
+          </P>
         </TouchableOpacity>
       </View>
+
       <View>
         <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{paddingLeft:20,
-        marginVertical:13
-        }}>
-          <View 
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ paddingLeft: 20, marginVertical: 13 }}
+        >
+          {locations
+  .sort((a, b) => {
+    const distanceA = userLocation ? haversine(userLocation, {
+      latitude: a.coordinates.latitude,
+      longitude: a.coordinates.longitude,
+    }, { unit: "km" }) : 0;
+
+    const distanceB = haversine(userLocation, {
+      latitude: b.coordinates.latitude,
+      longitude: b.coordinates.longitude,
+    }, { unit: "km" });
+
+    return distanceA - distanceB; // Ascending order
+  })
+  .map((item, index) => (
+    <View
+      key={index}
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        backgroundColor: "white",
+        borderRadius: 5,
+        padding: 10,
+        marginRight: 15,
+      }}
+    >
+      <Image
+        source={require("@assets/logo/logo-r.png")}
+        style={{
+          height: 50,
+          width: 50,
+          marginRight: 10,
+          resizeMode: "contain",
+        }}
+      />
+      <View>
+        <P
           style={{
-            display:"flex",
-            flexDirection:"row",
-            backgroundColor:"white",
-            borderRadius:5,
-            padding:10,
-            marginRight:15
-          }}>
-             <Image 
-                source={require("./../../assets/logo/logo-r.png")}
-                style={{height:50, width:50, marginRight:10, resizeMode:"contain"}}
-              />
-            <View>
-              <P style={{
-                fontSize:18,
-              }}>Apartement Suhat</P>
-              <P style={{fontSize:13}}>1.5km away from you</P>
-            </View>
-            
-          </View>
-          <View 
-          style={{
-            display:"flex",
-            flexDirection:"row",
-            backgroundColor:"white",
-            borderRadius:5,
-            padding:10,
-            marginRight:15
-          }}>
-             <Image 
-                source={require("./../../assets/logo/logo-r.png")}
-                style={{height:50, width:50, marginRight:10, resizeMode:"contain"}}
-              />
-            <View>
-              <P style={{
-                fontSize:18,
-              }}>Apartement Suhat</P>
-              <P style={{fontSize:13}}>1.5km away from you</P>
-            </View>
-            
-          </View>
-          <View 
-          style={{
-            display:"flex",
-            flexDirection:"row",
-            backgroundColor:"white",
-            borderRadius:5,
-            padding:10,
-            marginRight:15
-          }}>
-             <Image 
-                source={require("./../../assets/logo/logo-r.png")}
-                style={{height:50, width:50, marginRight:10, resizeMode:"contain"}}
-              />
-            <View>
-              <P style={{
-                fontSize:18,
-              }}>Apartement Suhat</P>
-              <P style={{fontSize:13}}>1.5km away from you</P>
-            </View>
-            
-          </View>
-          <View 
-          style={{
-            display:'flex',
-            flexDirection:'row',
-            backgroundColor:'white',
-            borderRadius:5,
-            padding:10,
-            marginRight:15
-          }}>
-             <Image 
-                source={require('@assets/logo/logo-r.png')}
-                style={{height:50, width:50, marginRight:10, resizeMode:'contain'}}
-              />
-            <View>
-              <P style={{
-                fontSize:18,
-              }}>Apartement Suhat</P>
-              <P style={{fontSize:13}}>1.5km away from you</P>
-            </View>
-            
-          </View>
-          
-        </ScrollView>
-        <View style={{
-          alignItems:'center',
-          display:'flex',
-          paddingBottom:25,
-        }}>
-        <MapView
-          style={{
-            width:340,
-            height:180  ,
+            fontSize: 18,
           }}
-        />
+        >
+          {item.title}
+        </P>
+        <Text style={{ fontSize: 13 }}>
+          {userLocation &&
+            haversine(
+              userLocation,
+              {
+                latitude: item.coordinates.latitude,
+                longitude: item.coordinates.longitude,
+              },
+              { unit: "km" }
+            ).toFixed(1)}{" "}
+          KM Away from you
+        </Text>
+      </View>
+    </View>
+  ))}
+
+        </ScrollView>
+        <View
+          style={{
+            alignItems: "center",
+            display: "flex",
+            paddingBottom: 25,
+          }}
+        >
+          <MapView
+            style={{
+              width: 340,
+              height: 180,
+            }}
+            initialRegion={ initialRegion}
+          >
+            {locations.map((item, index) => (
+              <Marker
+                key={index}
+                coordinate={{
+                  latitude: item.coordinates.latitude,
+                  longitude: item.coordinates.longitude,
+                }}
+                title={item.title}
+                description={item.details}
+              />
+            ))}
+          </MapView>
         </View>
       </View>
     </LinearGradient>
@@ -350,7 +360,7 @@ function ShopThrifting() {
           paddingHorizontal:30
         }}>
           {
-            thrifting.map((product,index) => (
+            marketplace.recommendations.map((product,index) => (
               <View key={index} style={{marginHorizontal:8}}>
                  <Image 
                     source={{uri: product.image}}
@@ -404,7 +414,7 @@ function ShopUpcyle() {
         paddingLeft:30
       }}>
       {
-        upcyle.map((product,index) => (
+        marketplace.upcycle.map((product,index) => (
           <View key={index} style={{marginHorizontal:8}}>
             <Image 
                 source={{uri: product.image}}
@@ -474,7 +484,7 @@ export default function index() {
                   color={Colors.primary}
                 />
           </View>
-          <Location />
+          <LocationSection />
         </View>
           <ShopThrifting/>
           <ShopUpcyle />

@@ -18,7 +18,7 @@ export default function LandingScreen() {
           paddingVertical:16,
           alignItems:'center',
           borderRadius:99
-        }}onPress={() => router.push("/login")}>
+        }}onPress={() => router.push("/register")}>
           <MediumP style={{fontWeight: "700",color:Colors.white, }}>Daftar</MediumP>
         </TouchableOpacity>
         <TouchableOpacity style={{
@@ -28,7 +28,7 @@ export default function LandingScreen() {
           borderWidth:2,
           marginTop:10,
           borderColor:Colors.primary
-        }} onPress={() => router.push("/register")} >
+        }} onPress={() => router.push("/login")} >
           <MediumP style={{fontWeight: "700",color:Colors.primary, }}>Masuk</MediumP>
         </TouchableOpacity>
         

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "firebase-expo-auth-tutorial",
-    "slug": "firebase-expo-auth-tutorial",
+    "name": "Revive Ecosystem",
+    "slug": "revive-ecosystem",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,17 +12,21 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "plugins": [
+      "@react-native-google-signin/google-signin",
+    ],
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.revive.ecosystem"
     },
     "web": {
       "bundler": "metro",
@@ -34,6 +38,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "8a7078e8-73d8-4bf4-b2a8-437aa2549771"
+      }
     }
   }
 }
